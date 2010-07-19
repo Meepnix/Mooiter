@@ -7,7 +7,5 @@ Dependencies:
   PyQt4 Version 4.7.2
    **http://www.riverbankcomputing.co.uk/software/pyqt/intro
   tweepy 1.7
-   **http://github.com/joshthecoder/tweepy  
-  keyring 0.2
-   **http://pypi.python.org/pypi/keyring
+   **http://github.com/joshthecoder/tweepy
 
