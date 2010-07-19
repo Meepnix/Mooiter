@@ -10,17 +10,19 @@ import os
 import re
 import datetime
 import string
-import hashlib
+import base64
 
-#Test 3rd party modules
+#Mooiter modules
+import parser
+import account
+
+#Test 3rd party modules.
 try:
     from PyQt4 import QtGui
     from PyQt4 import QtCore
     from PyQt4 import QtWebKit
     import tweepy
-    import parser
     import keyring
-    import account
 except ImportError as e:
     print "Import Error" + e
 
@@ -28,7 +30,7 @@ class TwitterWindow(QtGui.QMainWindow):
     def __init__(self, Parent=None):
         super(TwitterWindow, self).__init__(Parent)
 
-        #settings
+        #Settings
         self.settings = QtCore.QSettings("cutiepie4", "Mooiter")
 
         self.resize(300, 550)
@@ -37,19 +39,18 @@ class TwitterWindow(QtGui.QMainWindow):
         #Menubar
         actionaccount = QtGui.QAction("&Account", self)
         self.connect(actionaccount, QtCore.SIGNAL('triggered()'), self.account_dialog)
-
         menubar = self.menuBar()
         menusettings = menubar.addMenu("&Settings")
         menusettings.addAction(actionaccount)
         
-
+        #Main tabs
         self.tabmain = QtGui.QTabWidget()
         self.publicwid = QtGui.QWidget()
-
         self.publicvbox = QtGui.QVBoxLayout()
+
         hbox = QtGui.QHBoxLayout()
 
-        #Create edit box and letter count into horizontal box
+        #Twitter posting box
         self.label = QtGui.QLabel()
         self.label.setMinimumWidth(33)
         self.label.setText('140')
@@ -57,8 +58,10 @@ class TwitterWindow(QtGui.QMainWindow):
         hbox.addWidget(self.intwit)
         hbox.addWidget(self.label)
 
-        #Public Sub Tab Home
-        self.subtab = QtGui.QTabWidget()
+        #Sub tabs
+        self.subtab = TimelineTabs(self)
+
+        #Static user home timeline tab.
         self.subwidget = QtGui.QWidget()
         self.homevbox = QtGui.QVBoxLayout()
 
@@ -73,19 +76,31 @@ class TwitterWindow(QtGui.QMainWindow):
         self.subwidget.setLayout(self.homevbox)
         self.subtab.addTab(self.subwidget, "Home")
 
-        #Combine horizontal edit box to vertical box
-        self.publicvbox.addLayout(hbox)
-
+        #Static @user timeline tab.
         
+        self.atwidget = QtGui.QWidget()
+        self.atvbox = QtGui.QVBoxLayout()
+
+        self.viewat = QtWebKit.QWebView()
+        self.viewat.page().mainFrame().setScrollBarPolicy\
+                                       (QtCore.Qt.Horizontal, 
+                                        QtCore.Qt.ScrollBarAlwaysOff)
+
+        self.viewat.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
+        
+        self.atvbox.addWidget(self.viewat)
+        self.atwidget.setLayout(self.atvbox)
+        self.subtab.addTab(self.atwidget, "@User")
+
+        #Tab related to all aspects that are public
+        self.publicvbox.addLayout(hbox)
         self.publicvbox.addWidget(self.subtab)
         self.publicwid.setLayout(self.publicvbox)
         self.tabmain.addTab(self.publicwid, "Public")
         self.setCentralWidget(self.tabmain)
         self.intwit.setFocus()
-
         self.view.load(QtCore.QUrl(u'file://localhost%s' % os.path.abspath('.')))
 
-        self.timeridle = QtCore.QTimer()
         self.timer = QtCore.QTimer()
         self.test_account()
             
@@ -94,7 +109,6 @@ class TwitterWindow(QtGui.QMainWindow):
 
         #Count text length alterations
         self.connect(self.intwit, QtCore.SIGNAL("textChanged()"), self.twit_count)
-
 
         self.connect(self.intwit, QtCore.SIGNAL("status"), self.submit_twit)
 
@@ -107,14 +121,13 @@ class TwitterWindow(QtGui.QMainWindow):
         """Load timeline if account exists"""
 
         self.timer.stop()
-        if self.settings.contains("User"):
-            username = self.settings.value("User").toString()
-            password = keyring.get_password("Mooiter",
-                                            hashlib.sha224(username).hexdigest())
+        if self.settings.contains("User") and self.settings.contains("use"):
+            username = base64.b64decode(self.settings.value("User").toString())
+            password = base64.b64decode(self.settings.value("use").toString())
             self.auth = tweepy.BasicAuthHandler(username, password)
             self.api = tweepy.API(self.auth)
+
             #Refresh twitter timeline every minute
-            
             self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_home_tweets)
             self.load_home_tweets()
             self.timer.start(300000)
@@ -134,6 +147,8 @@ class TwitterWindow(QtGui.QMainWindow):
             QtGui.QDesktopServices.openUrl(url)
         
     def load_home_tweets(self):
+        """Load user timeline into default home tab."""
+
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
                         type="text/css" media="all" /></head><body>'
@@ -160,7 +175,7 @@ class TwitterWindow(QtGui.QMainWindow):
                           os.path.abspath('./mooiter.py')))
         
     def twit_count(self):
-        """Count the length of the tweet"""
+        """Display twitter message length."""
 
         self.label.setText(str(140 - len(self.intwit.toPlainText())))
 
@@ -189,12 +204,10 @@ class TwitterEditBox(QtGui.QTextEdit):
         else:
             QtGui.QTextEdit.keyPressEvent(self, event)
 
-#TODO
-#Class Widget
 class TwitterTab(QtGui.QWidget):
     """Create user or hash tag timeline.
 
-    Args:
+    Attributes:
         tag: datetime object
         text: string username or hash tag
         auth: tweepy object
@@ -253,11 +266,19 @@ class TwitterTab(QtGui.QWidget):
         self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
                           os.path.abspath('./mooiter.py')))
 
-#class TwitterBar(QtGui.QTabBar):
-#    super(TwitterBar, self).__init__(Parent)
-
-#    def tabInserted(self, index):
-#        pass
+class TimelineTabs(QtGui.QTabWidget):
+    def __init__(self, Parent):
+        super(TimelineTabs, self).__init__(Parent)
+    
+    def tabInserted(self, number):
+        if number > 1:
+            button = QtGui.QPushButton()
+            self.tabBar().setTabButton(number, QtGui.QTabBar.RightSide, button)
+            
+        
+#QTabBar QTabWidget.tabBar (self)
+#QTabWidget.tabInserted (self, int)
+#QTabBar.setTabButton (self, int, ButtonPosition, QWidget)
 
 def period_ago(period):
     """Provides the time and date difference of a tweet.

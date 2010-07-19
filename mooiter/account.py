@@ -6,12 +6,11 @@
 # See LICENCE for details.
 
 import sys
-import hashlib
+import base64
 
 #Test third party modules
 try:
     import tweepy
-    import keyring
     from PyQt4 import QtGui
     from PyQt4 import QtCore
 except ImportError as e:
@@ -83,13 +82,11 @@ class TwitterAccount(QtGui.QDialog):
         self.connect(delete, QtCore.SIGNAL('clicked()'), self.delete_account)
 
         #Find out if an account already exists
-        if self.settings.contains("User"):
-            username = self.settings.value("User").toString()
-            password = keyring.get_password("Mooiter",
-                                            hashlib.sha224(username).hexdigest())
-            if password:
-                self.useredit.setText(unicode(username))
-                self.passwordedit.setText(unicode(password))
+        if self.settings.contains("User") and self.settings.contains("use"):
+            username = base64.b64decode(self.settings.value("User").toString())
+            password = base64.b64decode(self.settings.value("use").toString())
+            self.useredit.setText(unicode(username))
+            self.passwordedit.setText(unicode(password))
 
     def new_account(self):
         """Verfiy and store twitter account details"""
@@ -107,20 +104,17 @@ class TwitterAccount(QtGui.QDialog):
                                       QtGui.QMessageBox.Ok)
         else:
             #Store username and password
-            self.settings.setValue("User", QtCore.QVariant(username))
-            keyring.set_password("Mooiter", 
-                                 str(hashlib.sha224(username).hexdigest()),
-                                 unicode(password))
+            self.settings.setValue("User", (QtCore.QVariant(base64.b64encode(str(username)))))
+            self.settings.setValue("use", (QtCore.QVariant(base64.b64encode(str(password)))))
             #Signal account change to main window
             self.emit(QtCore.SIGNAL("changed"))
-
+            print "pie"
+          
     def delete_account(self):
         """Remove all twitter account details"""
-
-        keyring.set_password("Mooiter", str(hashlib.sha224
-                             (self.settings.value("User").toString()).hexdigest()), 
-                             "")
+        
         self.settings.remove("User")
+        self.settings.remove("use")
         self.useredit.setText("")
         self.passwordedit.setText("")
         #Signal account change to main window
