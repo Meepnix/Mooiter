@@ -128,7 +128,7 @@ class TwitterWindow(QtGui.QMainWindow):
             self.auth = tweepy.BasicAuthHandler(username, password)
             self.api = tweepy.API(self.auth)
 
-            #Refresh twitter timeline every minute
+            #Refresh static twitter timelines every minute
             self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_home_tweets)
             self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_mentions_tweets)
             self.load_home_tweets()
@@ -140,22 +140,25 @@ class TwitterWindow(QtGui.QMainWindow):
 
         result = url.toString().split(":")
         if result[0] == "hash":
-            print "hash"
+            tagwidget = TwitterTab(self, tag="hash", text=result[1], auth=self.api)
+            self.subtab.addTab(tagwidget, result[1])
         elif result[0] == "user":
             user = result[1]
             tagwidget = TwitterTab(self, tag="user", text=user[2:], auth=self.api)
-            self.subtab.addTab(tagwidget, user[2:])
+            self.subtab.addTab(tagwidget, ('@' + user[2:]))
         else:
             print result[0]
             QtGui.QDesktopServices.openUrl(url)
         
     def load_home_tweets(self):
         """Load user timeline into default home tab."""
-
+        
+        #Html Header
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
                         type="text/css" media="all" /></head><body>'
-                      
+                        
+        #Hmtl formatting of each tweet.              
         for twits in self.api.home_timeline():
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
@@ -174,7 +177,7 @@ class TwitterWindow(QtGui.QMainWindow):
                       </div></div><br />'
 
         html += u"</body></html>"
-        self.viewat.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
+        self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
                           os.path.abspath('./mooiter.py')))
     
     def load_mentions_tweets(self):
@@ -202,7 +205,7 @@ class TwitterWindow(QtGui.QMainWindow):
                       </div></div><br />'
 
         html += u"</body></html>"
-        self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
+        self.viewat.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
                           os.path.abspath('./mooiter.py')))
         
     def twit_count(self):
@@ -236,7 +239,7 @@ class TwitterEditBox(QtGui.QTextEdit):
             QtGui.QTextEdit.keyPressEvent(self, event)
 
 class TwitterTab(QtGui.QWidget):
-    """Create user or hash tag timeline.
+    """Create user or hash tag timeline webview widget.
 
     Attributes:
         tag: datetime object
@@ -262,7 +265,7 @@ class TwitterTab(QtGui.QWidget):
         if tag == "user":
             self.load_user_tweets(text)
         else:
-            print "twitter tab"
+            self.load_hash_tweets(text)
             
     def load_user_tweets(self, text):
         html = u'<html><head>\
@@ -296,6 +299,33 @@ class TwitterTab(QtGui.QWidget):
         html += u"</body></html>"
         self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
                           os.path.abspath('./mooiter.py')))
+
+    def load_hash_tweets(self, query):
+        html = u'<html><head>\
+                      <link rel="stylesheet" href="themes/theme_1/theme1.css"\
+                        type="text/css" media="all" /></head><body>'
+                      
+        for twits in self.api.search(query):
+            html += u'<div class="roundcorner_box">\
+                      <div class="roundcorner_top"><div></div></div>\
+                      <div class="roundcorner_content">'
+            html += u'<div class="pic_left">'
+            html += u'<img class="pic" src="' + twits.profile_image_url + u'" />'
+            html += u'</div>'
+            html += u'<div class="text_left">'
+            html += u'<h2>' + twits.from_user + u'</h2>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
+            html += u'<p>via ' + twits.source + u'</p>'
+            html += u'</div>'
+            html += u'<div style="clear: both;"></div>'
+            html += u'</div><div class="roundcorner_bottom"><div></div>\
+                      </div></div><br />'
+
+        html += u"</body></html>"
+        self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
+                          os.path.abspath('./mooiter.py')))
+        
 
 class TimelineTabs(QtGui.QTabWidget):
     """Custom Tab Widget providing non-static closable tabs."""

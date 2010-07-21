@@ -41,13 +41,16 @@ class LinkParser:
             return new_text
         
     def parse_tag(self, text):
-        """Parse text for tag/@ statements, outputs text with html tag/@ links.
+        """Parse text for hash/@ statements, outputs text with html hash/@ links.
 
         Args:
             text: String
 
         Returns:
             String of html formatted tag/@.
+                Example:
+                    <a class="internal" href="user://@Tordf">@Tordf</a>
+                    <a class="internal" href="hash://#funny">funny</a>
         """
          
         new_text = ''
@@ -60,15 +63,19 @@ class LinkParser:
             
             for match_tag in result_tag:
                 if match_tag.group(2) == "#":
+                    #Convert hash tag into a html link.
                     link_tag = u'#<a class="internal" href="hash://%s">%s</a>'\
-                                     % (match_tag.group(), match_tag.group()[1:])
+                                % (match_tag.group(), match_tag.group()[1:])
+                    #Grab all text before the hash tag and add converted link
                     new_text += u"%s%s" % (text[start_tag:\
                                            int(match_tag.start())], link_tag)
                     start_tag = int(match_tag.end())
                  
                 else:
+                    #Convert @ tag into a html link.
                     link_tag = u'<a class="internal" href="user://%s">%s</a>'\
-                                     % (match_tag.group(), match_tag.group())
+                                % (match_tag.group(), match_tag.group())
+                    #Grab all text before the hash tag and add converted link
                     new_text += u"%s%s" % (text[start_tag:\
                                            int(match_tag.start())], link_tag)
                     start_tag = int(match_tag.end())
