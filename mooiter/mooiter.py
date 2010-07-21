@@ -11,6 +11,7 @@ import re
 import datetime
 import string
 import base64
+import functools
 
 #Mooiter modules
 import parser
@@ -129,7 +130,9 @@ class TwitterWindow(QtGui.QMainWindow):
 
             #Refresh twitter timeline every minute
             self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_home_tweets)
+            self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_mentions_tweets)
             self.load_home_tweets()
+            self.load_mentions_tweets()
             self.timer.start(300000)
         
     def open_link(self, url):
@@ -154,6 +157,34 @@ class TwitterWindow(QtGui.QMainWindow):
                         type="text/css" media="all" /></head><body>'
                       
         for twits in self.api.home_timeline():
+            html += u'<div class="roundcorner_box">\
+                      <div class="roundcorner_top"><div></div></div>\
+                      <div class="roundcorner_content">'
+            html += u'<div class="pic_left">'
+            html += u'<img class="pic" src="' + twits.user.profile_image_url + u'" />'
+            html += u'</div>'
+            html += u'<div class="text_left">'
+            html += u'<h2>' + twits.user.screen_name + u'</h2>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
+            html += u'<p>via ' + twits.source + u'</p>'
+            html += u'</div>'
+            html += u'<div style="clear: both;"></div>'
+            html += u'</div><div class="roundcorner_bottom"><div></div>\
+                      </div></div><br />'
+
+        html += u"</body></html>"
+        self.viewat.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
+                          os.path.abspath('./mooiter.py')))
+    
+    def load_mentions_tweets(self):
+        """Load user mention timeline into default @user tab."""
+
+        html = u'<html><head>\
+                      <link rel="stylesheet" href="themes/theme_1/theme1.css"\
+                        type="text/css" media="all" /></head><body>'
+                      
+        for twits in self.api.mentions():
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
@@ -267,18 +298,27 @@ class TwitterTab(QtGui.QWidget):
                           os.path.abspath('./mooiter.py')))
 
 class TimelineTabs(QtGui.QTabWidget):
+    """Custom Tab Widget providing non-static closable tabs."""
+    
     def __init__(self, Parent):
         super(TimelineTabs, self).__init__(Parent)
     
     def tabInserted(self, number):
-        if number > 1:
-            button = QtGui.QPushButton()
-            self.tabBar().setTabButton(number, QtGui.QTabBar.RightSide, button)
-            
+        """Add non-static closable tabs."""
         
-#QTabBar QTabWidget.tabBar (self)
-#QTabWidget.tabInserted (self, int)
-#QTabBar.setTabButton (self, int, ButtonPosition, QWidget)
+        if number > 1:
+            button = QtGui.QPushButton('x')
+            button.setFixedSize(16, 16)
+            self.tabBar().setTabButton(number, QtGui.QTabBar.LeftSide, button)
+            #Show which tab the close button belongs.
+            self.connect(button, QtCore.SIGNAL('clicked()'), 
+                         functools.partial(self.close_tab, number))
+
+    def close_tab(self, number):
+        """Remove tab and cleanup related widget."""
+        
+        self.widget(number).destroy(True)
+        self.removeTab(number)
 
 def period_ago(period):
     """Provides the time and date difference of a tweet.

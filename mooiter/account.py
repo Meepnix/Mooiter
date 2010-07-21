@@ -32,7 +32,7 @@ class TwitterAccount(QtGui.QDialog):
         hboxbuttons = QtGui.QHBoxLayout()
 
         delete = QtGui.QPushButton('&Delete')
-        buttonbox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Apply|
+        buttonbox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Save|
                                            QtGui.QDialogButtonBox.Close)
 
         #Create horizontal line
@@ -73,7 +73,7 @@ class TwitterAccount(QtGui.QDialog):
         self.setTabOrder(delete, buttonbox)
         
         
-        self.connect(buttonbox.button(QtGui.QDialogButtonBox.Apply),
+        self.connect(buttonbox.button(QtGui.QDialogButtonBox.Save),
                      QtCore.SIGNAL("clicked()"), self.new_account)
 
         self.connect(buttonbox, QtCore.SIGNAL("rejected()"),
