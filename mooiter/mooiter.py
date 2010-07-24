@@ -332,23 +332,41 @@ class TimelineTabs(QtGui.QTabWidget):
     
     def __init__(self, Parent):
         super(TimelineTabs, self).__init__(Parent)
+        self.positions = {}
+        self.count = 0
+        self.mapper = QtCore.QSignalMapper(self)
+        self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), self.close_tab)
     
     def tabInserted(self, number):
         """Add non-static closable tabs."""
         
         if number > 1:
-            button = QtGui.QPushButton('x')
+            
+            button = QtGui.QPushButton("x")
             button.setFixedSize(16, 16)
             self.tabBar().setTabButton(number, QtGui.QTabBar.LeftSide, button)
-            #Show which tab the close button belongs.
-            self.connect(button, QtCore.SIGNAL('clicked()'), 
-                         functools.partial(self.close_tab, number))
+            #Create unique tab id.
+            self.count += 1
+            idtab = 'a' + str(self.count)
+            #Store tab index location.
+            self.positions[idtab] = number
+            #Map tab ID location 
+            self.connect(button, QtCore.SIGNAL("clicked()"), self.mapper, QtCore.SLOT("map()"))
+            self.mapper.setMapping(button, idtab)
 
-    def close_tab(self, number):
+    def close_tab(self, tab):
         """Remove tab and cleanup related widget."""
         
-        self.widget(number).destroy(True)
-        self.removeTab(number)
+        idtab = str(tab)
+        #Decrement all tab locations that appear after the removed tab.
+        for key, value in self.positions.iteritems():
+            if value > self.positions[idtab]:
+                self.positions[key] = self.positions[key] - 1
+            
+        self.widget(self.positions[idtab]).destroy(True)
+        self.removeTab(self.positions[idtab])
+        del(self.positions[idtab])
+        
 
 def period_ago(period):
     """Provides the time and date difference of a tweet.

@@ -94,11 +94,10 @@ class TwitterAccount(QtGui.QDialog):
         username = self.useredit.text()
         password = self.passwordedit.text()
         #Verfiy twitter account exists
-        try:
-            auth = tweepy.BasicAuthHandler(username, password)
-            api = tweepy.API(auth)
-            api.home_timeline()
-        except tweepy.TweepError:
+        
+        auth = tweepy.BasicAuthHandler(username, password)
+        api = tweepy.API(auth)
+        if not api.verify_credentials():
             QtGui.QMessageBox.warning(self, 'Warning',
                                       "Could not authenticate twitter account", 
                                       QtGui.QMessageBox.Ok)
