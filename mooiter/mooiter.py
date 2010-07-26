@@ -140,14 +140,19 @@ class TwitterWindow(QtGui.QMainWindow):
 
         result = url.toString().split(":")
         if result[0] == "hash":
-            tagwidget = TwitterTab(self, tag="hash", text=result[1], auth=self.api)
+            tagwidget = TwitterTab(self, tag="hash", text=result[1],
+                                   auth=self.api)
+            #Handle dynamic tab links
+            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
             self.subtab.addTab(tagwidget, result[1])
         elif result[0] == "user":
             user = result[1]
-            tagwidget = TwitterTab(self, tag="user", text=user[2:], auth=self.api)
+            tagwidget = TwitterTab(self, tag="user", text=user[2:],
+                                   auth=self.api)
+            #Handle dynamic tab links
+            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
             self.subtab.addTab(tagwidget, ('@' + user[2:]))
         else:
-            print result[0]
             QtGui.QDesktopServices.openUrl(url)
         
     def load_home_tweets(self):
@@ -267,6 +272,9 @@ class TwitterTab(QtGui.QWidget):
         else:
             self.load_hash_tweets(text)
             
+        #Handle webview links
+        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.signal_link)
+            
     def load_user_tweets(self, text):
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
@@ -325,6 +333,9 @@ class TwitterTab(QtGui.QWidget):
         html += u"</body></html>"
         self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
                           os.path.abspath('./mooiter.py')))
+
+    def signal_link(self, link):
+        self.emit(QtCore.SIGNAL("linkClicked(QUrl)"), link)
         
 
 class TimelineTabs(QtGui.QTabWidget):
