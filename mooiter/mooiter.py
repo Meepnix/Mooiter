@@ -105,7 +105,10 @@ class TwitterWindow(QtGui.QMainWindow):
         self.timer = QtCore.QTimer()
         self.test_account()
             
-        #Handle webview links
+        #Handle home webview links
+        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
+
+        #Handle @User webview links
         self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
 
         #Count text length alterations
@@ -114,7 +117,10 @@ class TwitterWindow(QtGui.QMainWindow):
         self.connect(self.intwit, QtCore.SIGNAL("status"), self.submit_twit)
 
     def account_dialog(self):
+        """Account dialog window."""
+        
         dialog = account.TwitterAccount(self)
+        #Any changes to account, test new account details
         self.connect(dialog, QtCore.SIGNAL("changed"), self.test_account)
         dialog.show()
 
@@ -141,14 +147,14 @@ class TwitterWindow(QtGui.QMainWindow):
         result = url.toString().split(":")
         if result[0] == "hash":
             tagwidget = TwitterTab(self, tag="hash", text=result[1],
-                                   auth=self.api)
+                                   auth=self.api, time=self.timer)
             #Handle dynamic tab links
             self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
             self.subtab.addTab(tagwidget, result[1])
         elif result[0] == "user":
             user = result[1]
             tagwidget = TwitterTab(self, tag="user", text=user[2:],
-                                   auth=self.api)
+                                   auth=self.api, time=self.timer)
             #Handle dynamic tab links
             self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
             self.subtab.addTab(tagwidget, ('@' + user[2:]))
@@ -238,6 +244,8 @@ class TwitterEditBox(QtGui.QTextEdit):
         self.setMinimumHeight(50)
 
     def keyPressEvent(self, event):
+        """EditBox posts twitter on return"""
+        
         if event.key() == QtCore.Qt.Key_Return:
             self.emit(QtCore.SIGNAL("status"))
         else:
@@ -250,9 +258,10 @@ class TwitterTab(QtGui.QWidget):
         tag: datetime object
         text: string username or hash tag
         auth: tweepy object
+        time: QTime object
 
     """
-    def __init__(self, Parent, tag, text, auth):
+    def __init__(self, Parent, tag, text, auth, time):
         super(TwitterTab, self).__init__(Parent)
         self.api = auth
         self.view = QtWebKit.QWebView()
@@ -266,16 +275,29 @@ class TwitterTab(QtGui.QWidget):
         
         vbox.addWidget(self.view)
         self.setLayout(vbox)
-     
+        self.mapper = QtCore.QSignalMapper(self)
+        
         if tag == "user":
             self.load_user_tweets(text)
+            self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
+                                                    self.load_user_tweets)
+            self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper, 
+                                             QtCore.SLOT("map()"))
+            self.mapper.setMapping(time, text)
         else:
             self.load_hash_tweets(text)
-            
+            self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
+                                                    self.load_hash_tweets)
+            self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper,
+                                             QtCore.SLOT("map()"))
+            self.mapper.setMapping(time, text)
+
         #Handle webview links
         self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.signal_link)
             
     def load_user_tweets(self, text):
+        """Create html timeline of selected @user."""
+        
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
                       type="text/css" media="all" /></head><body>'
@@ -283,11 +305,11 @@ class TwitterTab(QtGui.QWidget):
         html += u'<div class="roundcorner_box">\
                   <div class="roundcorner_top"><div></div></div>\
                   <div class="roundcorner_content">'
-        html += u'<h2>' + self.api.get_user(text).screen_name + u'</h2>'
+        html += u'<h2>' + self.api.get_user(str(text)).screen_name + u'</h2>'
         html += u'</div><div class="roundcorner_bottom"><div></div>\
                   </div></div><br />'
 
-        for twits in self.api.user_timeline(text):
+        for twits in self.api.user_timeline(str(text)):
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
@@ -313,7 +335,7 @@ class TwitterTab(QtGui.QWidget):
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
                         type="text/css" media="all" /></head><body>'
                       
-        for twits in self.api.search(query):
+        for twits in self.api.search(str(query)):
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
@@ -346,7 +368,8 @@ class TimelineTabs(QtGui.QTabWidget):
         self.positions = {}
         self.count = 0
         self.mapper = QtCore.QSignalMapper(self)
-        self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), self.close_tab)
+        self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
+                     self.close_tab)
     
     def tabInserted(self, number):
         """Add non-static closable tabs."""
@@ -362,7 +385,8 @@ class TimelineTabs(QtGui.QTabWidget):
             #Store tab index location.
             self.positions[idtab] = number
             #Map tab ID location 
-            self.connect(button, QtCore.SIGNAL("clicked()"), self.mapper, QtCore.SLOT("map()"))
+            self.connect(button, QtCore.SIGNAL("clicked()"), self.mapper, 
+                         QtCore.SLOT("map()"))
             self.mapper.setMapping(button, idtab)
 
     def close_tab(self, tab):
