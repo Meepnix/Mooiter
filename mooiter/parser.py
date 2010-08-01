@@ -41,7 +41,7 @@ class LinkParser:
             return new_text
         
     def parse_tag(self, text):
-        """Parse text for hash/@ statements, outputs text with html hash/@ links.
+        """Parse text for hash/@ statements, output text with html hash/@ links.
 
         Args:
             text: String
@@ -84,4 +84,4 @@ class LinkParser:
           
             
 if __name__ == "__main__":
-    print LinkParser().parse_links("fuu @Tordf: #funny | #xkcd: iPad http://goo.gl/Q1nn")
+    print LinkParser().parse_links("fuu @Tordf: #funny | #xkcd: iPad http://go\\                                   o.gl/Q1nn")

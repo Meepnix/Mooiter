@@ -103,8 +103,10 @@ class TwitterAccount(QtGui.QDialog):
                                       QtGui.QMessageBox.Ok)
         else:
             #Store username and password
-            self.settings.setValue("User", (QtCore.QVariant(base64.b64encode(str(username)))))
-            self.settings.setValue("use", (QtCore.QVariant(base64.b64encode(str(password)))))
+            self.settings.setValue("User", (QtCore.QVariant\
+                                            (base64.b64encode(str(username)))))
+            self.settings.setValue("use", (QtCore.QVariant\
+                                           (base64.b64encode(str(password)))))
             #Signal account change to main window
             self.emit(QtCore.SIGNAL("changed"))
             print "pie"

@@ -1,4 +1,4 @@
-Mooiter: Twitter Client
+Mooiter: A Python cross-platform Twitter client using PyQt4 GUI and Tweepy Twitter API.
 
 Author: Christopher Massey
 Licence: MIT

@@ -39,7 +39,8 @@ class TwitterWindow(QtGui.QMainWindow):
 
         #Menubar
         actionaccount = QtGui.QAction("&Account", self)
-        self.connect(actionaccount, QtCore.SIGNAL('triggered()'), self.account_dialog)
+        self.connect(actionaccount, QtCore.SIGNAL('triggered()'), 
+                     self.account_dialog)
         menubar = self.menuBar()
         menusettings = menubar.addMenu("&Settings")
         menusettings.addAction(actionaccount)
@@ -71,14 +72,14 @@ class TwitterWindow(QtGui.QMainWindow):
                                      (QtCore.Qt.Horizontal, 
                                       QtCore.Qt.ScrollBarAlwaysOff)
 
-        self.view.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
+        self.view.page().setLinkDelegationPolicy(QtWebKit.QWebPage.\
+                                                 DelegateAllLinks)
 
         self.homevbox.addWidget(self.view)
         self.subwidget.setLayout(self.homevbox)
         self.subtab.addTab(self.subwidget, "Home")
 
-        #Static @user timeline tab.
-        
+        #Static @user timeline tab. 
         self.atwidget = QtGui.QWidget()
         self.atvbox = QtGui.QVBoxLayout()
 
@@ -87,7 +88,8 @@ class TwitterWindow(QtGui.QMainWindow):
                                        (QtCore.Qt.Horizontal, 
                                         QtCore.Qt.ScrollBarAlwaysOff)
 
-        self.viewat.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
+        self.viewat.page().setLinkDelegationPolicy(QtWebKit.QWebPage.\
+                                                   DelegateAllLinks)
         
         self.atvbox.addWidget(self.viewat)
         self.atwidget.setLayout(self.atvbox)
@@ -100,27 +102,32 @@ class TwitterWindow(QtGui.QMainWindow):
         self.tabmain.addTab(self.publicwid, "Public")
         self.setCentralWidget(self.tabmain)
         self.intwit.setFocus()
-        self.view.load(QtCore.QUrl(u'file://localhost%s' % os.path.abspath('.')))
+        self.view.load(QtCore.QUrl(u'file://localhost%s' % \
+                       os.path.abspath('.')))
 
         self.timer = QtCore.QTimer()
         self.test_account()
             
         #Handle home webview links
-        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
+        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), 
+                     self.open_link)
 
         #Handle @User webview links
-        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
+        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), 
+                     self.open_link)
 
         #Count text length alterations
-        self.connect(self.intwit, QtCore.SIGNAL("textChanged()"), self.twit_count)
+        self.connect(self.intwit, QtCore.SIGNAL("textChanged()"), 
+                     self.twit_count)
 
-        self.connect(self.intwit, QtCore.SIGNAL("status"), self.submit_twit)
+        self.connect(self.intwit, QtCore.SIGNAL("status"), 
+                     self.submit_twit)
 
     def account_dialog(self):
         """Account dialog window."""
         
         dialog = account.TwitterAccount(self)
-        #Any changes to account, test new account details
+        #Any changes to account, test new account details.
         self.connect(dialog, QtCore.SIGNAL("changed"), self.test_account)
         dialog.show()
 
@@ -134,29 +141,40 @@ class TwitterWindow(QtGui.QMainWindow):
             self.auth = tweepy.BasicAuthHandler(username, password)
             self.api = tweepy.API(self.auth)
 
-            #Refresh static twitter timelines every minute
-            self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_home_tweets)
-            self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.load_mentions_tweets)
+            #Refresh static twitter timelines every 5 minutes.
+            self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
+                         self.load_home_tweets)
+            self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
+                         self.load_mentions_tweets)
             self.load_home_tweets()
             self.load_mentions_tweets()
             self.timer.start(300000)
         
     def open_link(self, url):
-        """Determine url type"""
+        """Determine url type.
+
+            Create a dynamic tab containing user or tag timeline, or load url
+            with default web browser.
+            
+            Args:
+                url: Qurl object of link being accessed.
+        """
 
         result = url.toString().split(":")
         if result[0] == "hash":
             tagwidget = TwitterTab(self, tag="hash", text=result[1],
                                    auth=self.api, time=self.timer)
-            #Handle dynamic tab links
-            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
+            #Handle dynamic tab links.
+            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), 
+                         self.open_link)
             self.subtab.addTab(tagwidget, result[1])
         elif result[0] == "user":
             user = result[1]
             tagwidget = TwitterTab(self, tag="user", text=user[2:],
                                    auth=self.api, time=self.timer)
-            #Handle dynamic tab links
-            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), self.open_link)
+            #Handle dynamic tab links.
+            self.connect(tagwidget, QtCore.SIGNAL("linkClicked(QUrl)"), 
+                         self.open_link)
             self.subtab.addTab(tagwidget, ('@' + user[2:]))
         else:
             QtGui.QDesktopServices.openUrl(url)
@@ -175,11 +193,13 @@ class TwitterWindow(QtGui.QMainWindow):
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
             html += u'<div class="pic_left">'
-            html += u'<img class="pic" src="' + twits.user.profile_image_url + u'" />'
+            html += u'<img class="pic" src="' + twits.user.profile_image_url + \
+                    u'" />'
             html += u'</div>'
             html += u'<div class="text_left">'
             html += u'<h2>' + twits.user.screen_name + u'</h2>'
-            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + \
+                    u'</p>'
             html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
             html += u'<p>via ' + twits.source + u'</p>'
             html += u'</div>'
@@ -194,20 +214,23 @@ class TwitterWindow(QtGui.QMainWindow):
     def load_mentions_tweets(self):
         """Load user mention timeline into default @user tab."""
 
+        #Html header
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
-                        type="text/css" media="all" /></head><body>'
-                      
+                      type="text/css" media="all" /></head><body>'
+        #Html formatting of each twitter mention.
         for twits in self.api.mentions():
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
             html += u'<div class="pic_left">'
-            html += u'<img class="pic" src="' + twits.user.profile_image_url + u'" />'
+            html += u'<img class="pic" src="' + twits.user.profile_image_url + \
+                    u'" />'
             html += u'</div>'
             html += u'<div class="text_left">'
             html += u'<h2>' + twits.user.screen_name + u'</h2>'
-            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + \
+                    u'</p>'
             html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
             html += u'<p>via ' + twits.source + u'</p>'
             html += u'</div>'
@@ -237,14 +260,14 @@ class TwitterWindow(QtGui.QMainWindow):
             self.intwit.setText("")
 
 class TwitterEditBox(QtGui.QTextEdit):
-    """Custom TextEdit Widget"""
+    """Editbox posts twitter tweets."""
 
     def __init__(self, Parent):
         super(TwitterEditBox, self).__init__(Parent)
         self.setMinimumHeight(50)
 
     def keyPressEvent(self, event):
-        """EditBox posts twitter on return"""
+        """EditBox posts tweet on return keypress"""
         
         if event.key() == QtCore.Qt.Key_Return:
             self.emit(QtCore.SIGNAL("status"))
@@ -271,18 +294,20 @@ class TwitterTab(QtGui.QWidget):
                                 (QtCore.Qt.Horizontal, 
                                  QtCore.Qt.ScrollBarAlwaysOff)
 
-        self.view.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
+        self.view.page().setLinkDelegationPolicy(QtWebKit.QWebPage.\
+                                                 DelegateAllLinks)
         
         vbox.addWidget(self.view)
         self.setLayout(vbox)
         self.mapper = QtCore.QSignalMapper(self)
         
         if tag == "user":
-            self.load_user_tweets(text)
+            self.load_user_tweets(text) 
             self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
                                                     self.load_user_tweets)
             self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper, 
                                              QtCore.SLOT("map()"))
+            #Refresh timeline using the timer object used by the MainWindow.
             self.mapper.setMapping(time, text)
         else:
             self.load_hash_tweets(text)
@@ -290,18 +315,20 @@ class TwitterTab(QtGui.QWidget):
                                                     self.load_hash_tweets)
             self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper,
                                              QtCore.SLOT("map()"))
+            #Refresh timeline using the timer object used by the MainWindow.
             self.mapper.setMapping(time, text)
 
-        #Handle webview links
-        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), self.signal_link)
+        #Handle webview links.
+        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), 
+                     self.signal_link)
             
     def load_user_tweets(self, text):
         """Create html timeline of selected @user."""
-        
+        #HTML Header 
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
                       type="text/css" media="all" /></head><body>'
-
+        #HTML formatted User.
         html += u'<div class="roundcorner_box">\
                   <div class="roundcorner_top"><div></div></div>\
                   <div class="roundcorner_content">'
@@ -309,16 +336,19 @@ class TwitterTab(QtGui.QWidget):
         html += u'</div><div class="roundcorner_bottom"><div></div>\
                   </div></div><br />'
 
+        #HTML formatted timelines.
         for twits in self.api.user_timeline(str(text)):
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
                       <div class="roundcorner_content">'
             html += u'<div class="pic_left">'
-            html += u'<img class="pic" src="' + twits.user.profile_image_url + u'" />'
+            html += u'<img class="pic" src="' + twits.user.profile_image_url + \
+                    u'" />'
             html += u'</div>'
             html += u'<div class="text_left">'
             html += u'<h2>' + twits.user.screen_name + u'</h2>'
-            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + \
+                    u'</p>'
             html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
             html += u'<p>via ' + twits.source + u'</p>'
             html += u'</div>'
@@ -331,10 +361,14 @@ class TwitterTab(QtGui.QWidget):
                           os.path.abspath('./mooiter.py')))
 
     def load_hash_tweets(self, query):
+        """Create html timeline of selected hash tag."""
+
+        #HTML Header
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
-                        type="text/css" media="all" /></head><body>'
+                      type="text/css" media="all" /></head><body>'
                       
+        #HTML formatted timelines.
         for twits in self.api.search(str(query)):
             html += u'<div class="roundcorner_box">\
                       <div class="roundcorner_top"><div></div></div>\
@@ -344,7 +378,8 @@ class TwitterTab(QtGui.QWidget):
             html += u'</div>'
             html += u'<div class="text_left">'
             html += u'<h2>' + twits.from_user + u'</h2>'
-            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + u'</p>'
+            html += u'<p>' + parser.LinkParser().parse_links(twits.text) + \
+                    u'</p>'
             html += u'<p>' + str(period_ago(twits.created_at)) + u'</p>'
             html += u'<p>via ' + twits.source + u'</p>'
             html += u'</div>'
