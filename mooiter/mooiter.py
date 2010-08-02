@@ -113,7 +113,7 @@ class TwitterWindow(QtGui.QMainWindow):
                      self.open_link)
 
         #Handle @User webview links
-        self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), 
+        self.connect(self.viewat, QtCore.SIGNAL("linkClicked(QUrl)"), 
                      self.open_link)
 
         #Count text length alterations
@@ -389,7 +389,7 @@ class TwitterTab(QtGui.QWidget):
 
         html += u"</body></html>"
         self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
-                          os.path.abspath('./mooiter.py')))
+                                            os.path.abspath('./mooiter.py')))
 
     def signal_link(self, link):
         self.emit(QtCore.SIGNAL("linkClicked(QUrl)"), link)
@@ -400,42 +400,43 @@ class TimelineTabs(QtGui.QTabWidget):
     
     def __init__(self, Parent):
         super(TimelineTabs, self).__init__(Parent)
-        self.positions = {}
-        self.count = 0
-        self.mapper = QtCore.QSignalMapper(self)
-        self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
-                     self.close_tab)
+        self._positions = {}
+        self._count = 0
+        self._mapper = QtCore.QSignalMapper(self)
+        self.connect(self._mapper, QtCore.SIGNAL("mapped(const QString &)"), 
+                     self._close_tab)
     
     def tabInserted(self, number):
         """Add non-static closable tabs."""
         
-        if number > 1:
-            
+        #Add dynamic tabs after static home and @user tabs
+        if number > 1: 
             button = QtGui.QPushButton("x")
             button.setFixedSize(16, 16)
             self.tabBar().setTabButton(number, QtGui.QTabBar.LeftSide, button)
             #Create unique tab id.
-            self.count += 1
-            idtab = 'a' + str(self.count)
+            self._count += 1
+            idtab = 'a' + str(self._count)
             #Store tab index location.
-            self.positions[idtab] = number
+            self._positions[idtab] = number
             #Map tab ID location 
-            self.connect(button, QtCore.SIGNAL("clicked()"), self.mapper, 
+            self.connect(button, QtCore.SIGNAL("clicked()"), self._mapper, 
                          QtCore.SLOT("map()"))
-            self.mapper.setMapping(button, idtab)
+            self._mapper.setMapping(button, idtab)
 
-    def close_tab(self, tab):
+    def _close_tab(self, tab):
         """Remove tab and cleanup related widget."""
         
         idtab = str(tab)
         #Decrement all tab locations that appear after the removed tab.
-        for key, value in self.positions.iteritems():
-            if value > self.positions[idtab]:
-                self.positions[key] = self.positions[key] - 1
-            
-        self.widget(self.positions[idtab]).destroy(True)
-        self.removeTab(self.positions[idtab])
-        del(self.positions[idtab])
+        for key, value in self._positions.iteritems():
+            if value > self._positions[idtab]:
+                self._positions[key] = self._positions[key] - 1
+        #Make widget attached to the cloding tab is destroyed    
+        self.widget(self._positions[idtab]).destroy(True)
+        self.removeTab(self._positions[idtab])
+        #Remove closing tab from index
+        del(self._positions[idtab])
         
 
 def period_ago(period):
