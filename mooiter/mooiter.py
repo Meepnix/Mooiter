@@ -31,8 +31,6 @@ class TwitterWindow(QtGui.QMainWindow):
     def __init__(self, Parent=None):
         super(TwitterWindow, self).__init__(Parent)
 
-        #Settings
-        self.settings = QtCore.QSettings("cutiepie4", "Mooiter")
 
         self.resize(300, 550)
         self.setWindowTitle("Mooiter")
@@ -95,7 +93,7 @@ class TwitterWindow(QtGui.QMainWindow):
         self.atwidget.setLayout(self.atvbox)
         self.subtab.addTab(self.atwidget, "@User")
 
-        #Tab related to all aspects that are public
+        #Tab related to all public timelines.
         self.publicvbox.addLayout(hbox)
         self.publicvbox.addWidget(self.subtab)
         self.publicwid.setLayout(self.publicvbox)
@@ -103,7 +101,13 @@ class TwitterWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.tabmain)
         self.intwit.setFocus()
         self.view.load(QtCore.QUrl(u'file://localhost%s' % \
-                       os.path.abspath('.')))
+                                   os.path.abspath('.')))
+        #Load layout settings.
+        self.settings = QtCore.QSettings("cutiepie4", "Mooiter")
+        if self.settings.contains("Geometry"):
+            self.restoreGeometry(self.settings.value("Geometry").toByteArray())
+        if self.settings.contains("State"):
+            self.restoreState(self.settings.value("State").toByteArray())
 
         self.timer = QtCore.QTimer()
         self.test_account()
@@ -122,6 +126,11 @@ class TwitterWindow(QtGui.QMainWindow):
 
         self.connect(self.intwit, QtCore.SIGNAL("status"), 
                      self.submit_twit)
+
+    def closeEvent(self, event):
+        """Save MainWindow layout settings."""
+        self.settings.setValue("Geometry", QtCore.QVariant(self.saveGeometry()))
+        self.settings.setValue("State", QtCore.QVariant(self.saveState())) 
 
     def account_dialog(self):
         """Account dialog window."""
@@ -185,7 +194,7 @@ class TwitterWindow(QtGui.QMainWindow):
         #Html Header
         html = u'<html><head>\
                       <link rel="stylesheet" href="themes/theme_1/theme1.css"\
-                        type="text/css" media="all" /></head><body>'
+                      type="text/css" media="all" /></head><body>'
                         
         #Hmtl formatting of each tweet.              
         for twits in self.api.home_timeline():
@@ -209,7 +218,7 @@ class TwitterWindow(QtGui.QMainWindow):
 
         html += u"</body></html>"
         self.view.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
-                          os.path.abspath('./mooiter.py')))
+                                            os.path.abspath('./mooiter.py')))
     
     def load_mentions_tweets(self):
         """Load user mention timeline into default @user tab."""
@@ -240,7 +249,7 @@ class TwitterWindow(QtGui.QMainWindow):
 
         html += u"</body></html>"
         self.viewat.setHtml(html, QtCore.QUrl(u'file://localhost%s' %\
-                          os.path.abspath('./mooiter.py')))
+                                              os.path.abspath('./mooiter.py')))
         
     def twit_count(self):
         """Display twitter message length."""
@@ -400,6 +409,7 @@ class TimelineTabs(QtGui.QTabWidget):
     
     def __init__(self, Parent):
         super(TimelineTabs, self).__init__(Parent)
+        self.buttons = []
         self._positions = {}
         self._count = 0
         self._mapper = QtCore.QSignalMapper(self)
@@ -411,18 +421,21 @@ class TimelineTabs(QtGui.QTabWidget):
         
         #Add dynamic tabs after static home and @user tabs
         if number > 1: 
-            button = QtGui.QPushButton("x")
-            button.setFixedSize(16, 16)
-            self.tabBar().setTabButton(number, QtGui.QTabBar.LeftSide, button)
             #Create unique tab id.
-            self._count += 1
             idtab = 'a' + str(self._count)
+            self.buttons.append(idtab)
+            #Create dynamic pushbutton.
+            self.buttons[self._count] = QtGui.QPushButton("x")
+            self.buttons[self._count].setFixedSize(16, 16)
+            self.tabBar().setTabButton(number, QtGui.QTabBar.LeftSide, 
+                                       self.buttons[self._count])
             #Store tab index location.
             self._positions[idtab] = number
-            #Map tab ID location 
-            self.connect(button, QtCore.SIGNAL("clicked()"), self._mapper, 
-                         QtCore.SLOT("map()"))
-            self._mapper.setMapping(button, idtab)
+            #Map tab ID location.
+            self.connect(self.buttons[self._count], QtCore.SIGNAL("clicked()"), 
+                         self._mapper, QtCore.SLOT("map()"))
+            self._mapper.setMapping(self.buttons[self._count], idtab)
+            self._count += 1
 
     def _close_tab(self, tab):
         """Remove tab and cleanup related widget."""
@@ -432,8 +445,6 @@ class TimelineTabs(QtGui.QTabWidget):
         for key, value in self._positions.iteritems():
             if value > self._positions[idtab]:
                 self._positions[key] = self._positions[key] - 1
-        #Make widget attached to the cloding tab is destroyed    
-        self.widget(self._positions[idtab]).destroy(True)
         self.removeTab(self._positions[idtab])
         #Remove closing tab from index
         del(self._positions[idtab])
