@@ -93,7 +93,7 @@ class TwitterAccount(QtGui.QDialog):
 
         username = self.useredit.text()
         password = self.passwordedit.text()
-        #Verfiy twitter account exists
+        #Verfiy twitter account exists on twitter.
         
         auth = tweepy.BasicAuthHandler(username, password)
         api = tweepy.API(auth)

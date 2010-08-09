@@ -129,6 +129,7 @@ class TwitterWindow(QtGui.QMainWindow):
 
     def closeEvent(self, event):
         """Save MainWindow layout settings."""
+
         self.settings.setValue("Geometry", QtCore.QVariant(self.saveGeometry()))
         self.settings.setValue("State", QtCore.QVariant(self.saveState())) 
 
@@ -149,15 +150,21 @@ class TwitterWindow(QtGui.QMainWindow):
             password = base64.b64decode(self.settings.value("use").toString())
             self.auth = tweepy.BasicAuthHandler(username, password)
             self.api = tweepy.API(self.auth)
-
-            #Refresh static twitter timelines every 5 minutes.
-            self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
-                         self.load_home_tweets)
-            self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
-                         self.load_mentions_tweets)
-            self.load_home_tweets()
-            self.load_mentions_tweets()
-            self.timer.start(300000)
+            if not self.api.verify_credentials():
+                QtGui.QMessageBox.warning(self, 'Warning',
+                                          "Could not authenticate twitter \
+                                          account", 
+                                          QtGui.QMessageBox.Ok)
+            else:
+                #Refresh static twitter timelines every 5 minutes.
+                self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
+                             self.load_home_tweets)
+                self.connect(self.timer, QtCore.SIGNAL("timeout()"), 
+                             self.load_mentions_tweets)
+                #Load timelines onces the mainwindow GUI is loaded.
+                QtCore.QTimer.singleShot(0, self.load_home_tweets)
+                QtCore.QTimer.singleShot(0, self.load_mentions_tweets)
+                self.timer.start(300000)
         
     def open_link(self, url):
         """Determine url type.
@@ -296,6 +303,9 @@ class TwitterTab(QtGui.QWidget):
     def __init__(self, Parent, tag, text, auth, time):
         super(TwitterTab, self).__init__(Parent)
         self.api = auth
+        self.typ = tag
+        self.timer = time
+        self.data = text
         self.view = QtWebKit.QWebView()
 
         vbox = QtGui.QVBoxLayout()
@@ -309,23 +319,27 @@ class TwitterTab(QtGui.QWidget):
         vbox.addWidget(self.view)
         self.setLayout(vbox)
         self.mapper = QtCore.QSignalMapper(self)
-        
-        if tag == "user":
-            self.load_user_tweets(text) 
+        QtCore.QTimer.singleShot(0, self.load_timelines)
+
+    def load_timelines(self):
+        """Initialise user or tag timelines"""
+  
+        if self.typ == "user":
+            self.load_user_tweets(self.data) 
             self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
-                                                    self.load_user_tweets)
-            self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper, 
-                                             QtCore.SLOT("map()"))
+                          self.load_user_tweets)
+            self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.mapper, 
+                         QtCore.SLOT("map()"))
             #Refresh timeline using the timer object used by the MainWindow.
-            self.mapper.setMapping(time, text)
+            self.mapper.setMapping(self.timer, self.data)
         else:
-            self.load_hash_tweets(text)
+            self.load_hash_tweets(self.data)
             self.connect(self.mapper, QtCore.SIGNAL("mapped(const QString &)"), 
-                                                    self.load_hash_tweets)
-            self.connect(time, QtCore.SIGNAL("timeout()"), self.mapper,
-                                             QtCore.SLOT("map()"))
+                         self.load_hash_tweets)
+            self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.mapper,
+                         QtCore.SLOT("map()"))
             #Refresh timeline using the timer object used by the MainWindow.
-            self.mapper.setMapping(time, text)
+            self.mapper.setMapping(self.timer, self.data)
 
         #Handle webview links.
         self.connect(self.view, QtCore.SIGNAL("linkClicked(QUrl)"), 
